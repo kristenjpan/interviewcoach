@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interview Coach</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --border: #d9d6cd;
+    --text: #1f1e1a;
+    --muted: #6b675d;
+    --accent: #2b5fb5;
+    --accent-text: #ffffff;
+    --sample: #8a6d1f;
+    --sample-bg: #fbf3d9;
+    --error: #a12b2b;
+    --error-bg: #fbe4e4;
+    --coach-bg: #eef2fa;
+    --you-bg: #f0efe9;
+    --good: #2f7d4f;
+    --good-bg: #e3f2e8;
+    --warn: #9a6a12;
+    --warn-bg: #fbf0d6;
+    --bad: #a12b2b;
+    --bad-bg: #fbe4e4;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a; --surface: #212126; --border: #3a3a42; --text: #ececea;
+      --muted: #a2a09a; --accent: #6f9be8; --accent-text: #17171a;
+      --sample: #e2c46a; --sample-bg: #3a3320; --error: #f28b8b; --error-bg: #3e2323;
+      --coach-bg: #26303f; --you-bg: #2a2a30;
+      --good: #7fd19a; --good-bg: #1f3527; --warn: #e2c46a; --warn-bg: #3a3320;
+      --bad: #f28b8b; --bad-bg: #3e2323;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17171a; --surface: #212126; --border: #3a3a42; --text: #ececea;
+    --muted: #a2a09a; --accent: #6f9be8; --accent-text: #17171a;
+    --sample: #e2c46a; --sample-bg: #3a3320; --error: #f28b8b; --error-bg: #3e2323;
+    --coach-bg: #26303f; --you-bg: #2a2a30;
+    --good: #7fd19a; --good-bg: #1f3527; --warn: #e2c46a; --warn-bg: #3a3320;
+    --bad: #f28b8b; --bad-bg: #3e2323;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 24px; margin-bottom: 24px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+
+  details.setup { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin-bottom: 20px; }
+  details.setup > summary { cursor: pointer; font-weight: 600; padding: 12px 16px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details.setup > summary::-webkit-details-marker { display: none; }
+  details.setup > summary .sum-hint { font-weight: 400; color: var(--muted); font-size: 14px; }
+  details.setup > .setup-body { padding: 0 16px 16px; border-top: 1px solid var(--border); }
+
+  .key-row {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin: 16px 0;
+  }
+  .key-row label { font-weight: 600; white-space: nowrap; }
+  .key-row input {
+    flex: 1 1 260px; min-width: 0; font: 14px var(--mono); padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text);
+  }
+  .key-row .hint { flex-basis: 100%; font-size: 13px; color: var(--muted); margin: 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-weight: 600; }
+  .field small { color: var(--muted); font-size: 13px; }
+  textarea {
+    width: 100%; min-height: 220px; resize: vertical;
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text);
+  }
+  textarea:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0 0; }
+  button {
+    font: inherit; font-weight: 600; cursor: pointer; padding: 10px 18px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button.small { padding: 6px 12px; font-size: 14px; }
+  button:disabled { opacity: 0.55; cursor: wait; }
+  .status { color: var(--muted); font-size: 14px; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 999px; vertical-align: middle;
+  }
+  .badge.sample { background: var(--sample-bg); color: var(--sample); }
+  .badge.live { background: var(--accent); color: var(--accent-text); }
+
+  .error { background: var(--error-bg); color: var(--error); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 14px; }
+  .hidden { display: none !important; }
+
+  /* ---- Session ---- */
+  .session { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .session-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .session-head h2 { font-size: 17px; margin: 0; }
+  .progress { height: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width 0.3s; }
+
+  .transcript { display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 92%; border-radius: 12px; padding: 12px 14px; }
+  .msg.coach { align-self: flex-start; background: var(--coach-bg); border-bottom-left-radius: 4px; }
+  .msg.you { align-self: flex-end; background: var(--you-bg); border-bottom-right-radius: 4px; white-space: pre-wrap; }
+  .msg .who { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chip { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-text); }
+  .chip.followup { background: var(--warn-bg); color: var(--warn); }
+  .msg .q { font-weight: 600; font-size: 16px; }
+  .msg .t { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .msg .t strong { color: var(--text); }
+
+  /* score card */
+  .score { align-self: stretch; max-width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .score .verdict { font-weight: 600; margin: 0 0 10px; }
+  .score .total { float: right; font-size: 14px; color: var(--muted); }
+  .crit { display: grid; grid-template-columns: 130px 92px 1fr; gap: 6px 12px; align-items: start; padding: 6px 0; border-top: 1px dashed var(--border); font-size: 14px; }
+  @media (max-width: 640px) { .crit { grid-template-columns: 1fr; gap: 2px; } }
+  .crit .name { font-weight: 600; }
+  .crit .dots { display: flex; gap: 4px; align-items: center; padding-top: 4px; }
+  .crit .dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); }
+  .crit .dots i.on { border-color: transparent; }
+  .crit.good .dots i.on { background: var(--good); }
+  .crit.warn .dots i.on { background: var(--warn); }
+  .crit.bad .dots i.on { background: var(--bad); }
+  .crit .comment { color: var(--muted); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+  .cols h4 { margin: 0 0 4px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .cols .worked h4 { color: var(--good); }
+  .cols .missing h4 { color: var(--bad); }
+  .cols ul { margin: 0; padding-left: 18px; font-size: 14px; }
+  .rewrite { margin-top: 12px; border-radius: 8px; padding: 10px 12px; background: var(--bg); font-size: 14px; }
+  .rewrite h4 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  .rewrite .orig { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--bad); }
+  .rewrite .imp { margin-top: 4px; padding: 6px 10px; border-left: 3px solid var(--good); background: var(--good-bg); border-radius: 0 6px 6px 0; }
+  .rewrite .why { margin-top: 6px; color: var(--muted); }
+
+  /* composer */
+  .composer { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .composer details { margin-bottom: 10px; background: var(--sample-bg); border-radius: 8px; padding: 8px 12px; }
+  .composer details summary { cursor: pointer; font-weight: 600; color: var(--sample); }
+  .composer details .sa { margin-top: 8px; white-space: pre-wrap; font-size: 14px; }
+  .composer textarea { min-height: 140px; }
+  .composer .label { font-weight: 600; margin-bottom: 6px; }
+  .composer .label small { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+  /* summary */
+  .summary table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  .summary th, .summary td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .summary th { color: var(--muted); font-weight: 600; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Interview Coach</h1>
+    <p>One question at a time, scored against a rubric, with follow-ups like a real interviewer.</p>
+  </header>
+
+  <details class="setup" id="setup" open>
+    <summary><span>Setup: API key, job description, résumé</span><span class="sum-hint" id="sumHint"></span></summary>
+    <div class="setup-body">
+      <div class="key-row">
+        <label for="apiKey">Claude API key</label>
+        <input id="apiKey" type="password" placeholder="sk-ant-… (leave empty to try sample mode)" autocomplete="off" spellcheck="false">
+        <button id="toggleKey" type="button">Show</button>
+        <p class="hint">The key stays in this page only. It is sent directly to api.anthropic.com and is never stored. Leave it empty and the coach runs in sample mode: pre-written questions and sample answers, and a rule-based score instead of a real one.</p>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label for="jd">Job description</label>
+          <small>Paste the full posting: responsibilities, requirements, team context.</small>
+          <textarea id="jd" placeholder="Paste the job description here."></textarea>
+        </div>
+        <div class="field">
+          <label for="resume">Résumé</label>
+          <small>Plain text is fine. Include roles, results, and dates.</small>
+          <textarea id="resume" placeholder="Paste your résumé here."></textarea>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="generate" class="primary" type="button">Generate questions and start</button>
+        <button id="loadSample" type="button">Load sample inputs</button>
+        <button id="clear" type="button">Clear</button>
+        <span id="status" class="status"></span>
+      </div>
+      <div id="setupError" class="error hidden"></div>
+    </div>
+  </details>
+
+  <section class="session hidden" id="session">
+    <div class="session-head">
+      <h2 id="sessionTitle">Question 1 of 10</h2>
+      <div>
+        <span id="modeBadge" class="badge hidden"></span>
+        <button id="restart" type="button" class="small">End session</button>
+      </div>
+    </div>
+    <div class="progress"><div id="progressBar"></div></div>
+
+    <div class="transcript" id="transcript"></div>
+
+    <div class="composer" id="composer">
+      <details id="sampleBox" class="hidden">
+        <summary>Show a sample strong answer first</summary>
+        <div class="sa" id="sampleAnswer"></div>
+      </details>
+      <div id="answerArea">
+        <div class="label">Your answer <small>Speak it as you would in the room, then type it here.</small></div>
+        <textarea id="answer" placeholder="Type your answer…"></textarea>
+        <div class="actions">
+          <button id="score" class="primary" type="button">Score my answer</button>
+          <button id="skip" type="button">Skip this question</button>
+          <span id="sessionStatus" class="status"></span>
+        </div>
+      </div>
+      <div id="afterScore" class="actions hidden">
+        <button id="followup" type="button">Ask me a follow-up</button>
+        <button id="next" class="primary" type="button">Next question</button>
+        <span id="afterStatus" class="status"></span>
+      </div>
+      <div id="sessionError" class="error hidden"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    setup: $('setup'), sumHint: $('sumHint'),
+    key: $('apiKey'), toggleKey: $('toggleKey'),
+    jd: $('jd'), resume: $('resume'),
+    generate: $('generate'), loadSample: $('loadSample'), clear: $('clear'),
+    status: $('status'), setupError: $('setupError'),
+    session: $('session'), sessionTitle: $('sessionTitle'), badge: $('modeBadge'), restart: $('restart'),
+    progressBar: $('progressBar'), transcript: $('transcript'),
+    composer: $('composer'), sampleBox: $('sampleBox'), sampleAnswer: $('sampleAnswer'),
+    answerArea: $('answerArea'), answer: $('answer'), score: $('score'), skip: $('skip'), sessionStatus: $('sessionStatus'),
+    afterScore: $('afterScore'), followup: $('followup'), next: $('next'), afterStatus: $('afterStatus'),
+    sessionError: $('sessionError'),
+  };
+
+  const RUBRIC = ['Specificity', 'Structure', 'Ownership', 'Impact', 'Relevance'];
+  const MAX_FOLLOWUPS = 2;
+
+  // ======================= Sample data (no API key) =======================
+  const SAMPLE = {
+    jd:
+`Technical Program Manager, Payments Platform
+Northwind Financial — San Francisco (hybrid)
+
+About the role
+The Payments Platform team owns the systems that move roughly $40B a year for our merchant customers. We are hiring a Technical Program Manager to drive our migration from a monolithic ledger to an event-driven architecture, coordinate cross-team launches, and run the operating rhythm for a 60-person engineering org.
+
+What you will do
+- Own end-to-end delivery of multi-quarter programs spanning 6–8 engineering teams, Risk, Compliance, and Finance.
+- Build and maintain program roadmaps, dependency maps, and risk registers; run weekly program reviews with directors and VPs.
+- Define launch readiness criteria and go/no-go processes for changes touching money movement.
+- Surface tradeoffs between scope, timeline, and reliability, and drive decisions when teams disagree.
+- Partner with Engineering Managers on capacity planning and with Finance on program budgets.
+- Improve how the org plans: templates, metrics, retrospectives, and tooling.
+
+What we are looking for
+- 4+ years in program or project management in a technical environment, ideally fintech or infrastructure.
+- Track record of delivering large cross-functional programs with regulatory or audit constraints.
+- Comfortable reading architecture docs and asking engineers hard questions about sequencing and risk.
+- Strong written communication; you can write a one-page status that a VP actually reads.
+- Experience with incident retrospectives and reliability programs is a plus.
+- MBA or equivalent business background welcome but not required.`,
+    resume:
+`Priya Raman
+San Francisco, CA · priya.raman@example.com
+
+EDUCATION
+MBA, Haas School of Business, UC Berkeley — expected May 2027
+  Concentration: Technology Strategy. Vibe Coding elective; Haas Tech Club VP of Programming.
+B.S. Industrial Engineering, Georgia Tech — 2019
+
+EXPERIENCE
+Summer Associate, Product Operations — Stripe, Summer 2026
+- Ran the launch program for a new dispute-evidence workflow across Product, Risk, and Support; shipped to 100% of US merchants two weeks ahead of plan.
+- Built a launch-readiness checklist adopted by three product teams after the internship.
+
+Senior Program Manager — Chime, 2022–2025
+- Led the 14-month migration of card-authorization processing to a new vendor, coordinating 5 engineering teams, Compliance, and the vendor; zero customer-facing downtime at cutover.
+- Ran weekly program reviews for a 45-person org; cut the average status-doc length from 6 pages to 1.
+- Designed the go/no-go review used for all changes to money movement, including a rollback drill requirement.
+- Owned a $2.1M program budget; came in 8% under by renegotiating a contractor SOW.
+
+Program Manager — Chime, 2020–2022
+- Coordinated the incident-retrospective program; drove action-item completion from 40% to 85% in two quarters.
+- Managed the roadmap and dependency map for the mobile-app re-platform (3 teams, 9 months).
+
+Associate Consultant — Accenture, 2019–2020
+- Supported a core-banking replacement for a regional bank; built the test-phase schedule and tracked 300+ defects to closure.
+
+SKILLS
+Jira, Asana, Smartsheet, SQL, Looker, Confluence, basic Python. Certified Scrum Master.`,
+    behavioral: [
+      {
+        question: 'Tell me about the card-authorization vendor migration at Chime. What was the hardest disagreement between teams during those 14 months, and how did you resolve it?',
+        testing: 'Whether the "zero downtime" bullet reflects your influence or just a good team. They want to hear how you drive decisions when engineering teams disagree, which the posting calls out explicitly.',
+        sampleAnswer: 'About eight months in, the Authorization team wanted a single big-bang cutover to the new vendor, while the Risk Engineering team insisted on a six-week dual-run where both vendors processed every transaction. Auth argued dual-run doubled their on-call load; Risk argued a big-bang cutover on card auth was an unacceptable blast radius for a regulated product.\n\nI got both leads in a room with the actual failure data. I reframed it from "dual-run or not" to "what evidence would make each of you comfortable," and we landed on a two-week dual-run on 5% of traffic with explicit exit criteria: fewer than 0.01% decision mismatches and a rehearsed rollback under 10 minutes. I wrote the criteria into the go/no-go doc and the VP signed it. We hit the criteria in nine days, cut over, and had zero customer-facing downtime. Auth got a shorter dual-run than Risk asked for; Risk got a measurable gate instead of a promise.',
+      },
+      {
+        question: 'You cut a six-page status doc down to one page. Walk me through what you removed, who pushed back, and how you knew the new version was working.',
+        testing: 'Written communication and judgment about what leaders need. The posting asks for a one-pager "a VP actually reads," so they are checking whether you can name specific editorial choices, not just claim brevity.',
+        sampleAnswer: 'The old status doc listed every workstream every week, so a VP had to hunt for the two things that had changed. I rebuilt it around three questions: what changed since last week, what decision do we need from you, and what is the top risk. Everything else moved to an appendix link.\n\nTwo Engineering Managers pushed back because their teams\' work no longer appeared on the front page, and they read that as invisibility. I kept a rotating "team spotlight" line and, more importantly, showed them that the VP had asked three questions in the review the week after the change, versus zero in the prior month. Reading time dropped, and within two months the same format was adopted by two other programs without my asking. The tell that it worked was that the VP started replying to the doc by email with decisions, rather than deferring them to the meeting.',
+      },
+      {
+        question: 'Describe a time a program you owned was going to miss its date. When did you know, whom did you tell, and what did you trade off?',
+        testing: 'Honesty and early escalation. Every bullet on your résumé is a success, so the interviewer is probing for how you behave when things go wrong and whether you surface scope, timeline, and reliability tradeoffs rather than hiding them.',
+        sampleAnswer: 'On the mobile re-platform, six months into a nine-month plan, the authentication team\'s dependency slipped five weeks because of a vendor SDK bug. I knew on a Tuesday from the dependency review and told my director that Thursday, with three options rather than just the bad news: hold the date and cut the offline mode feature, hold scope and slip four weeks, or add two contractors for about $90K and slip two weeks.\n\nI recommended cutting offline mode because usage data showed under 3% of sessions used it, and it could ship in the next release. The director agreed, and I communicated it to the product lead the same day, with the data, so it did not feel like an ambush. We shipped on the original date. The lesson I took was to put dependency risk on the weekly review two months earlier than I had, because the SDK problem had been visible in their bug tracker for a while before it reached me.',
+      },
+      {
+        question: 'At Stripe you built a launch-readiness checklist that other teams adopted. How did you get adoption from teams you had no authority over, and what did you change based on their feedback?',
+        testing: 'Influence without authority and whether you improve process collaboratively. This role asks you to improve how a 60-person org plans, so they want evidence you can spread a practice beyond your own program.',
+        sampleAnswer: 'I did not pitch the checklist to anyone at first. I used it on my own launch, and when we shipped two weeks early with no rollback, the Risk PM asked what we had done differently. I shared the checklist as a one-page Notion doc and offered to sit in on their next readiness review.\n\nTheir feedback changed it in two ways. They added a Support-readiness row, because their launches generated more tickets than mine, and they asked me to remove the sign-off column since it felt like bureaucracy. I kept the sign-off but made it optional and labeled it for money-movement changes only. After that team used it, a third team copied it from them, not from me. The thing that made it spread was that it was short and it had a visible win attached, not that anyone mandated it.',
+      },
+      {
+        question: 'Give me an example of a hard question you asked an engineer about sequencing or technical risk, and what happened as a result.',
+        testing: 'Technical depth and courage. The posting wants someone comfortable reading architecture docs and challenging engineers. They are listening for a concrete technical concern, not "I asked about risks."',
+        sampleAnswer: 'During the vendor migration, the design doc had us migrating the settlement batch job in the same release as the real-time authorization path. I asked the tech lead why they were coupled, since settlement runs nightly and auth runs at thousands of requests per second, and whether a failure in the batch job could block auth traffic.\n\nHe initially said they shared a config service, so it was simpler to move together. I pushed on what "simpler" cost us if settlement failed at 2 a.m. after cutover. He went back, and the team split the release: auth first, settlement two weeks later once auth was stable. Settlement did in fact fail on its first night because of a timezone bug in the vendor file format. Because auth was already stable and separate, that was a four-hour fix with no customer impact instead of a rollback of the whole migration.',
+      },
+    ],
+    programManagement: [
+      {
+        question: 'If you joined us in your first month, how would you build the dependency map and risk register for the ledger migration? What would you need from the six to eight teams involved?',
+        testing: 'Your operating playbook for a multi-team program. They want to see structure: how you discover dependencies, how you rate risks, and how often you refresh them, drawing on your mobile re-platform and vendor-migration work.',
+        sampleAnswer: 'First two weeks, I would read the architecture docs and then do a 45-minute interview with each tech lead, asking three things: what do you need from another team before you can finish, what does another team need from you, and what would you be worried about if you were me. I would draw the dependency map from those interviews, not from a template, and then validate it in one joint session where every lead sees the whole graph.\n\nFor the risk register, I would rate each risk on likelihood and blast radius, with money-movement risks automatically high blast radius, and assign one named owner per risk. I would need from the teams a committed point of contact, an honest estimate with a confidence level rather than a date, and access to their bug trackers. Then it becomes a weekly rhythm: the map gets refreshed at the program review, and any dependency that slips more than a week goes on the VP-facing one-pager.',
+      },
+      {
+        question: 'Design a go/no-go process for a change to money movement. What criteria are non-negotiable, who has veto power, and how do you keep it from becoming a rubber stamp?',
+        testing: 'Launch-readiness judgment in a regulated environment. You built a similar review at Chime, so they are checking whether you can generalize it and whether you understand why rollback drills and Compliance sign-off matter for $40B in payment flow.',
+        sampleAnswer: 'Non-negotiable criteria: a rehearsed rollback with a measured time to recover, reconciliation tests that prove every dollar in equals every dollar out on a production-like dataset, Compliance sign-off for anything that changes reporting or limits, and a named on-call owner for the first 72 hours. Veto sits with three people: the engineering owner, the Risk or Compliance lead, and the on-call SRE. Any one of them can stop it, and the reason gets written down.\n\nTo keep it from becoming a rubber stamp, I would make it evidence-based instead of checkbox-based. The review does not ask "did you test rollback," it asks "show me the rollback drill log and the recovery time." I would also track how many launches get a no-go each quarter. If it is zero for two quarters, the review is not working, and I would audit a few launches to see whether the criteria are being met or just asserted.',
+      },
+      {
+        question: 'Two engineering teams both need the same platform team\'s capacity in the same quarter. How do you decide who gets it, and how do you communicate the decision to the team that loses?',
+        testing: 'Capacity planning and conflict resolution with Engineering Managers. They want a prioritization framework tied to business impact, plus evidence you can deliver bad news cleanly.',
+        sampleAnswer: 'I would start by checking whether it is really a binary. Often the platform team can sequence the two requests or deliver a thinner version of one. If it truly is either-or, I would put both requests on the same one-page comparison: business impact in dollars or risk reduced, what is blocked downstream if it slips, and reversibility. Then I would bring that to the directors with a recommendation, because this is their call to make, and my job is to make it a ten-minute decision rather than a month-long argument.\n\nFor the team that loses, I would tell their EM directly before the decision is announced anywhere, with the reasoning and a committed slot for when their work gets capacity. Bad news is easier to accept when it comes with a date. And I would put their deferred item on the risk register so it does not silently disappear.',
+      },
+      {
+        question: 'What metrics would you put on a weekly program review for a migration off a monolithic ledger, and which one would you look at first if you only had five minutes?',
+        testing: 'Whether you can define leading indicators for a technical migration rather than just tracking milestones. Your incident-retrospective work suggests you think in metrics, so they are checking that it extends to delivery health.',
+        sampleAnswer: 'I would separate delivery health from migration health. Delivery health: percentage of milestones on track, number of dependencies that slipped this week, and open decisions older than seven days. Migration health: share of transaction volume flowing through the new event-driven path, reconciliation mismatch rate between old and new ledgers, and p99 latency of the new path versus the monolith.\n\nWith five minutes, I would look at the reconciliation mismatch rate first. A milestone can slip and be recovered, but a ledger that disagrees with itself on money movement is the one thing that can stop the whole program and trigger a regulatory issue. If that number is clean, then I look at dependencies slipped, because that is the leading indicator that the date will move before the milestone chart shows it.',
+      },
+      {
+        question: 'You raised action-item completion on retrospectives from 40% to 85%. How would you apply that to a reliability program here, where the action items live with teams that do not report to you?',
+        testing: 'Follow-through and systems thinking. The posting lists reliability programs as a plus, and they want to see if you can turn a process win into a durable mechanism across an org.',
+        sampleAnswer: 'What moved the number at Chime was not nagging. It was three mechanisms: every action item got a single named owner and a due date in the same tracker engineers already used, the open items showed up on the weekly review in front of the directors, and items older than 30 days had to be either done, rescheduled with a reason, or explicitly cancelled by the EM. Silent decay stopped being an option.\n\nHere, I would do the same but tie it to something the teams already care about. If reliability action items feed into an error-budget policy, a team with overdue items from a Sev-1 retrospective spends its next sprint on them before new features. That gives the EMs a reason to close items that has nothing to do with me. I would also publish a simple scoreboard by team, because visibility does more than authority in an org where I do not own the roadmap.',
+      },
+    ],
+  };
+
+  const GENERIC_SAMPLE = {
+    behavioral: [
+      { question: 'Tell me about the most complex cross-functional program you have delivered. What made it complex, and what was your specific contribution?', testing: 'Ownership and scale. The interviewer wants to separate what you personally drove from what the team accomplished.',
+        sampleAnswer: 'The most complex program I have run involved four teams, an external vendor, and a hard regulatory date. The complexity came from dependencies: no team could finish without another. My contribution was building the first dependency map, running a weekly review where slips were visible within days, and negotiating a scope cut that kept the date. We delivered on time, and the review format was reused on the next program.' },
+      { question: 'Describe a time you had to deliver difficult news to a senior stakeholder. How did you prepare, and what happened?', testing: 'Communication under pressure and whether you escalate early rather than hoping problems resolve themselves.',
+        sampleAnswer: 'Three months before launch, I learned a key integration would slip six weeks. I told my director within two days. I prepared a one-page note with the cause, three options with costs, and my recommendation. She chose the option I recommended, and because it came early, we had time to re-plan rather than react. The relationship got stronger, not weaker, because she could trust my dates.' },
+      { question: 'Tell me about a time two teams disagreed on priority or approach and you had to broker a decision.', testing: 'Influence without authority and your ability to frame tradeoffs so leaders can decide quickly.',
+        sampleAnswer: 'Two teams disagreed about whether to launch in phases or all at once. I got both leads to state what evidence would change their mind, put both approaches on one page with the risks and timelines, and brought a recommendation to the decision maker. We chose a phased launch with clear exit criteria. Both teams could live with it because the criteria were measurable rather than a matter of opinion.' },
+      { question: 'Give me an example of a process you introduced that other teams adopted. Why did it stick?', testing: 'Whether you improve how an organization works, not just your own programs.',
+        sampleAnswer: 'I introduced a one-page launch checklist on my own program first, and only shared it after we shipped early without incident. A neighboring team asked for it, adapted it, and a third team copied it from them. It stuck because it was short, it was attached to a visible win, and I let the other teams change it rather than insisting on my version.' },
+      { question: 'Describe a program that did not go well. What would you do differently?', testing: 'Self-awareness and learning. A polished résumé invites this question; a specific, honest answer builds trust.',
+        sampleAnswer: 'An early program of mine slipped two months because I treated an external dependency as fixed when it was not. I found out late because I was not reviewing their tracker. What I would do differently, and what I now do, is put every external dependency on the weekly review from week one and ask for a confidence level rather than a date. That failure is the reason my later programs had visible dependency tracking.' },
+    ],
+    programManagement: [
+      { question: 'How would you build a roadmap and dependency map for a program you are joining midway through?', testing: 'Your operating playbook and how quickly you can get to a credible plan.',
+        sampleAnswer: 'In the first two weeks I would interview each lead about what they need from others and what others need from them, draw the dependency map from those conversations, and validate it in one joint session. I would then rate each dependency by slip risk and put the top five on the weekly review. The roadmap comes from the map: sequence the work so the riskiest dependencies land earliest.' },
+      { question: 'Walk me through how you run a weekly program review. What is on the agenda, who attends, and what decisions get made?', testing: 'Whether your operating rhythm produces decisions or just status.',
+        sampleAnswer: 'Thirty minutes, leads and one decision maker. Agenda: what changed since last week, decisions needed today, top risks, and dependencies that slipped. Status that has not changed does not get airtime. Every decision needed has an owner and a recommendation before the meeting so the room decides rather than discusses. The output is a one-page note with decisions and owners.' },
+      { question: 'How do you decide when a program is ready to launch? What criteria are non-negotiable?', testing: 'Launch-readiness judgment and how you balance speed against risk.',
+        sampleAnswer: 'Non-negotiable: a rehearsed rollback with measured recovery time, monitoring in place with a named on-call owner, and sign-off from whoever owns the risk the change creates. Everything else is a tradeoff to be argued on evidence. I would keep the review evidence-based: show me the rollback log, not a checkbox that says rollback was tested.' },
+      { question: 'A key dependency slips by six weeks. Walk me through the next 48 hours.', testing: 'Risk management and communication sequencing when a plan breaks.',
+        sampleAnswer: 'Day one: confirm the slip with the owning team and understand the cause, then re-run the plan to see what actually moves. Prepare three options: cut scope, move the date, or add capacity, each with cost. Day two: brief my director with a recommendation, then tell affected teams the same day so nobody hears it secondhand. Put the dependency on the weekly review with a recovery plan and an owner.' },
+      { question: 'What metrics tell you a program is healthy before the milestone dates say so?', testing: 'Whether you track leading indicators or only lagging ones.',
+        sampleAnswer: 'Leading indicators: number of dependencies that slipped this week, open decisions older than seven days, and the ratio of estimated to actual effort on completed work. If decisions are aging and dependencies are slipping, the milestone chart will turn red in a month even if it is green today. I watch those three every week and treat two consecutive bad weeks as a trigger to re-plan.' },
+    ],
+  };
+
+  // ======================= Prompts =======================
+  const GEN_SYSTEM =
+`You are an experienced hiring manager and interview coach. Given a job description and a candidate's résumé, write exactly ten interview questions the candidate is likely to face for this specific role: five behavioral questions and five program-management questions.
+
+Requirements:
+- Tailor every question to specifics in the job description and the résumé. Reference actual projects, companies, metrics, and requirements. Avoid generic questions.
+- Behavioral questions ask about past experience (situations, actions, results).
+- Program-management questions test how the candidate would plan, run, and de-risk programs in this role (roadmaps, dependencies, launches, stakeholders, metrics, tradeoffs).
+- For each question, add "testing": one to three sentences on what the interviewer is really testing and why, tied to the job description or a gap between the résumé and the role.
+- For each question, add "sampleAnswer": a strong model answer of 120 to 180 words, written in the candidate's first-person voice, grounded in real details from the résumé, with a clear situation, action, and measurable result (or, for program-management questions, a concrete approach with criteria and metrics). Do not invent employers; you may add plausible specifics consistent with the résumé.
+- Probe gaps and risks, not only strengths.
+
+Respond with JSON only, no markdown fences and no commentary, in exactly this shape:
+{
+  "behavioral": [ { "question": "...", "testing": "...", "sampleAnswer": "..." }, ... five items ... ],
+  "programManagement": [ { "question": "...", "testing": "...", "sampleAnswer": "..." }, ... five items ... ]
+}`;
+
+  const SCORE_SYSTEM =
+`You are a rigorous but encouraging interview coach. Score the candidate's spoken-style answer to one interview question for a specific role.
+
+Rubric, each scored 1 to 5 (5 = excellent):
+- Specificity: concrete situation, names, numbers, timeframes; not vague or generic.
+- Structure: a clear arc (situation, action, result), easy to follow, no rambling. For hypothetical questions: a clear approach with steps and criteria.
+- Ownership: the candidate's personal role and decisions are clear, distinct from the team's; shows judgment.
+- Impact: measurable outcome or clearly defined success criteria; explains why it mattered.
+- Relevance: connects to what this role needs per the job description; addresses what the interviewer is testing.
+
+Also produce:
+- "overall": one sentence verdict.
+- "worked": two to four short bullets on what worked.
+- "missing": two to four short bullets on what was missing or weak, tied to the rubric and to what the interviewer is testing.
+- "rewrite": pick ONE weak sentence quoted verbatim from the candidate's answer ("original"), write a stronger version in the candidate's voice ("improved") that keeps their facts and adds structure or specificity (you may use bracketed placeholders like [number] where a fact is unknown), and explain in one sentence why it is stronger ("why").
+If the answer is empty or off-topic, score it honestly with low marks and say so.
+
+Respond with JSON only, no markdown fences and no commentary, in exactly this shape:
+{
+  "overall": "...",
+  "criteria": [
+    {"name": "Specificity", "score": 1, "comment": "..."},
+    {"name": "Structure", "score": 1, "comment": "..."},
+    {"name": "Ownership", "score": 1, "comment": "..."},
+    {"name": "Impact", "score": 1, "comment": "..."},
+    {"name": "Relevance", "score": 1, "comment": "..."}
+  ],
+  "worked": ["...", "..."],
+  "missing": ["...", "..."],
+  "rewrite": {"original": "...", "improved": "...", "why": "..."}
+}`;
+
+  const FOLLOWUP_SYSTEM =
+`You are an experienced interviewer. Given the job description, the candidate's résumé, the question asked, and the candidate's answer (plus any earlier follow-ups), ask ONE probing follow-up question a real interviewer would ask next. Target the weakest or vaguest part of the answer: press for specifics, numbers, the candidate's personal role, a tradeoff they glossed over, or a claim that sounds too clean. Keep it to one or two sentences, conversational, as you would say it aloud. Do not repeat an earlier follow-up.
+
+Respond with JSON only, no markdown fences and no commentary:
+{"question": "...", "testing": "one sentence on what this follow-up is probing"}`;
+
+  function ctxBlock(jd, resume) {
+    return `<job_description>\n${jd.trim()}\n</job_description>\n\n<resume>\n${resume.trim()}\n</resume>`;
+  }
+
+  function threadBlock(thread) {
+    return thread.map((t, i) => {
+      const label = i === 0 ? 'question' : 'follow_up_question';
+      return `<${label}>\n${t.question}\n</${label}>\n<what_interviewer_is_testing>\n${t.testing || ''}\n</what_interviewer_is_testing>\n<candidate_answer>\n${t.answer || '(no answer given)'}\n</candidate_answer>`;
+    }).join('\n\n');
+  }
+
+  // ======================= API =======================
+  async function callClaude(apiKey, system, userMessage) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'server-side-fallback-2026-07-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-5-5',
+        max_tokens: 16000,
+        fallbacks: 'default',
+        output_config: { effort: 'high' },
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* non-JSON body */ }
+
+    if (!res.ok) {
+      const msg = data && data.error && data.error.message ? data.error.message : `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    if (data.stop_reason === 'refusal') {
+      const why = data.stop_details && data.stop_details.explanation ? ` ${data.stop_details.explanation}` : '';
+      throw new Error(`The model declined this request.${why}`);
+    }
+    const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+    if (!text) throw new Error('The response contained no text.');
+    if (data.stop_reason === 'max_tokens') throw new Error('The response was cut off at the output limit. Try again.');
+    return text;
+  }
+
+  function extractJson(text) {
+    let c = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const first = c.indexOf('{');
+    const last = c.lastIndexOf('}');
+    if (first >= 0 && last > first) c = c.slice(first, last + 1);
+    return JSON.parse(c);
+  }
+
+  function normalizeQuestions(obj) {
+    const norm = (arr, type) => (Array.isArray(arr) ? arr : [])
+      .map((q) => ({
+        type,
+        question: String(q.question || '').trim(),
+        testing: String(q.testing || '').trim(),
+        sampleAnswer: String(q.sampleAnswer || q.sample_answer || '').trim(),
+      }))
+      .filter((q) => q.question);
+    const list = [...norm(obj.behavioral, 'Behavioral'), ...norm(obj.programManagement || obj.program_management, 'Program management')];
+    if (!list.length) throw new Error('No questions found in the response.');
+    return list;
+  }
+
+  function normalizeScore(obj) {
+    const byName = {};
+    (Array.isArray(obj.criteria) ? obj.criteria : []).forEach((c) => { byName[String(c.name || '').toLowerCase()] = c; });
+    const criteria = RUBRIC.map((name) => {
+      const c = byName[name.toLowerCase()] || {};
+      const score = Math.max(1, Math.min(5, Math.round(Number(c.score) || 1)));
+      return { name, score, comment: String(c.comment || '').trim() };
+    });
+    const list = (a) => (Array.isArray(a) ? a : []).map((s) => String(s).trim()).filter(Boolean);
+    const rw = obj.rewrite || {};
+    return {
+      overall: String(obj.overall || '').trim(),
+      criteria,
+      worked: list(obj.worked),
+      missing: list(obj.missing),
+      rewrite: { original: String(rw.original || '').trim(), improved: String(rw.improved || '').trim(), why: String(rw.why || '').trim() },
+    };
+  }
+
+  // ======================= Sample-mode scoring (rule-based) =======================
+  const STOP = new Set('about above after again against all and any are because been before being below between both but by can did does doing down during each few for from further had has have having her here hers him his how into its itself just more most not now off once only other our ours out over own same she should some such than that the their theirs them then there these they this those through too under until very was were what when where which while who whom why will with would you your yours will able strong track record years experience ideally plus required looking role team teams'.split(' '));
+
+  function jdKeywords(jd) {
+    const freq = {};
+    (jd.toLowerCase().match(/[a-z][a-z-]{5,}/g) || []).forEach((w) => { if (!STOP.has(w)) freq[w] = (freq[w] || 0) + 1; });
+    return Object.keys(freq).sort((a, b) => freq[b] - freq[a]).slice(0, 30);
+  }
+
+  function splitSentences(text) {
+    return text.replace(/\s+/g, ' ').match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((s) => s.trim()).filter(Boolean) || [];
+  }
+
+  const VAGUE = /\b(helped|various|a lot|lots of|things|stuff|some|worked on|involved in|kind of|sort of|etc|really|very|basically|pretty much|successfully|great|good|nice)\b/gi;
+
+  function heuristicScore(answer, item, jd) {
+    const text = answer.trim();
+    const words = text.split(/\s+/).filter(Boolean);
+    const n = words.length;
+    const sentences = splitSentences(text);
+    const numbers = (text.match(/\$?\d[\d,.]*%?|\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty|thirty|fifty|hundred|thousand|million|billion)\b/gi) || []).length;
+    const iCount = (text.match(/\b(I|I'm|I've|I'd|my|me|myself)\b/g) || []).length;
+    const weCount = (text.match(/\b(we|we're|we've|our|us|the team)\b/gi) || []).length;
+    const resultWords = (text.match(/\b(result|outcome|led to|increased|reduced|cut|saved|shipped|delivered|launched|improved|grew|decreased|ahead of|under budget|on time|zero|from .* to)\b/gi) || []).length;
+    const structureWords = (text.match(/\b(situation|context|the challenge|my role|first|second|then|next|after that|so I|as a result|finally|in the end|the outcome|because|criteria|non-negotiable|step)\b/gi) || []).length;
+    const properNouns = (text.match(/(?:^|[.!?]\s+|\s)([A-Z][a-z]{2,})/g) || []).length;
+    const vague = (text.match(VAGUE) || []).length;
+    const kws = jdKeywords(jd);
+    const lower = text.toLowerCase();
+    const hits = kws.filter((k) => lower.includes(k)).length;
+    const hypothetical = item.type === 'Program management' && !item.isFollowup;
+
+    const clamp = (v) => Math.max(1, Math.min(5, Math.round(v)));
+    const specificity = n < 15 ? 1 : clamp(1.4 + Math.min(numbers, 4) * 0.6 + Math.min(properNouns, 3) * 0.3 + (n > 60 ? 0.6 : 0) - Math.min(vague, 4) * 0.35);
+    const structure = n < 15 ? 1 : clamp(1.4 + Math.min(structureWords, 5) * 0.5 + (sentences.length >= 4 ? 0.8 : sentences.length >= 2 ? 0.3 : 0) + (n >= 80 && n <= 280 ? 0.6 : n > 400 ? -0.5 : 0));
+    const ownership = n < 15 ? 1 : clamp(1.8 + (iCount >= weCount ? 1.2 : 0) + Math.min(iCount, 6) * 0.25 - (weCount > iCount * 2 ? 1 : 0) + (/\b(I decided|I recommended|I chose|my call|I pushed|I asked|I told|I would)\b/i.test(text) ? 0.7 : 0));
+    const impact = n < 15 ? 1 : clamp(1.4 + Math.min(resultWords, 3) * 0.6 + (numbers > 0 ? 1.1 : 0) + (/%|\$/.test(text) ? 0.5 : 0) + (hypothetical && /\b(metric|measure|criteria|track)\b/i.test(text) ? 0.8 : 0));
+    const relevance = n < 15 ? 1 : clamp(1.5 + Math.min(hits, 7) * 0.45 + (n > 40 ? 0.4 : 0));
+
+    const S = { Specificity: specificity, Structure: structure, Ownership: ownership, Impact: impact, Relevance: relevance };
+    const comments = {
+      Specificity: specificity >= 4 ? 'Concrete names, numbers, and timeframes make this believable.' : specificity === 3 ? 'Some detail, but a few claims are still general. One more number or name would help.' : 'Too general. Who, what, when, and how many are missing.',
+      Structure: structure >= 4 ? 'Easy to follow: situation, what you did, and what happened.' : structure === 3 ? 'The arc is there but hard to spot. Signpost the situation, your action, and the result.' : 'No clear beginning, middle, and end. Lead with the situation in one sentence.',
+      Ownership: ownership >= 4 ? 'Your personal role and decisions are clear.' : ownership === 3 ? 'It is not always clear what you did versus what the team did.' : 'Mostly "we" or passive voice. The interviewer cannot tell what you personally decided or did.',
+      Impact: impact >= 4 ? 'The outcome is measurable and you say why it mattered.' : impact === 3 ? 'An outcome is implied but not quantified.' : hypothetical ? 'No success criteria or metrics. Say how you would know it worked.' : 'No result. What changed because of what you did?',
+      Relevance: relevance >= 4 ? 'Clearly tied to what this role needs.' : relevance === 3 ? 'Related, but you did not connect it to the job description or to what the question is really testing.' : 'Does not address what the interviewer is testing here: ' + (item.testing || '').split('.')[0].toLowerCase() + '.',
+    };
+    const criteria = RUBRIC.map((name) => ({ name, score: S[name], comment: comments[name] }));
+
+    const worked = [];
+    if (numbers > 0) worked.push('You used numbers, which makes the story checkable.');
+    if (iCount >= weCount && iCount > 0) worked.push('First person throughout, so your role is visible.');
+    if (resultWords > 0) worked.push('You named an outcome rather than stopping at the action.');
+    if (hits >= 3) worked.push('You echoed language from the job description, which signals fit.');
+    if (sentences.length >= 4 && n <= 280) worked.push('Good length: enough detail without rambling.');
+    if (!worked.length) worked.push(n < 15 ? 'You gave an answer, which is where practice starts.' : 'You stayed on topic.');
+
+    const missing = [];
+    if (numbers === 0) missing.push('No numbers. Add a size, a duration, a percentage, or a dollar figure.');
+    if (weCount > iCount) missing.push('More "we" than "I". Say what you personally decided or did.');
+    if (resultWords === 0 && !hypothetical) missing.push('No result stated. End with what changed and how you know.');
+    if (hypothetical && !/\b(metric|measure|criteria|track|risk)\b/i.test(text)) missing.push('No criteria or metrics. Say how you would judge success or spot trouble early.');
+    if (vague >= 2) missing.push('Vague words like "helped" or "things" hide the substance. Replace each with a specific verb or noun.');
+    if (hits < 2) missing.push('Not tied back to the role. Connect the story to what this job needs.');
+    if (n > 350) missing.push('Long. Aim for about 90 seconds spoken, roughly 150 to 220 words.');
+    if (!missing.length) missing.push('Consider ending with one sentence on what you learned or would do differently.');
+
+    // Pick the weakest sentence: most vague words, fewest digits, then shortest.
+    let weak = null; let weakScore = -Infinity;
+    for (const s of sentences) {
+      const w = s.split(/\s+/).length;
+      if (w < 4) continue;
+      const sc = (s.match(VAGUE) || []).length * 2 + ((s.match(/\d/g) || []).length ? -3 : 0) + ((/\b(we|our|us)\b/i.test(s) && !/\bI\b/.test(s)) ? 1 : 0) + (w < 10 ? 0.5 : 0);
+      if (sc > weakScore) { weakScore = sc; weak = s; }
+    }
+    if (!weak) weak = sentences[0] || text;
+    let improved = weak
+      .replace(/\b(we|they|the team) helped (the team )?(to )?/gi, 'I ')
+      .replace(/\bhelped (the team )?(to )?/gi, '')
+      .replace(/\bworked on\b/gi, 'owned')
+      .replace(/\bwas involved in\b/gi, 'drove')
+      .replace(/\b(a lot of|lots of|various|some)\b/gi, '[number]')
+      .replace(/\b(things|stuff)\b/gi, '[the specific deliverable]')
+      .replace(/\b(really|very|basically|pretty much|successfully)\s+/gi, '')
+      .replace(/^\s*we\b/i, 'I')
+      .replace(/\bwe\b/g, 'I')
+      .replace(/\bour\b/g, 'my')
+      .replace(/\bus\b/g, 'me')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!/\d/.test(improved)) {
+      improved = improved.replace(/[.!?]+$/, '') + ', which moved [metric] from [before] to [after] within [timeframe].';
+    }
+    const rewrite = {
+      original: weak,
+      improved,
+      why: 'Sample-mode rewrite: it swaps vague verbs for ownership verbs, puts you as the subject, and forces a measurable result. Fill in the brackets with real figures.',
+    };
+
+    const total = criteria.reduce((a, c) => a + c.score, 0);
+    const overall = n < 15 ? 'Too short to score properly. Give the interviewer a full story.' : total >= 21 ? 'Strong answer. Tighten one or two details and this is ready for the room.' : total >= 15 ? 'Solid foundation. The gaps below are what separate a good answer from a memorable one.' : 'This needs work. Rebuild it around a specific situation, your decision, and a measured result.';
+    return { overall, criteria, worked, missing, rewrite };
+  }
+
+  function heuristicFollowup(thread, score) {
+    const asked = thread.slice(1).map((t) => t.question);
+    const lowest = [...score.criteria].sort((a, b) => a.score - b.score);
+    const probes = {
+      Specificity: { question: 'Can you get more concrete for me? Who exactly was involved, what did you change, and over what timeframe?', testing: 'Probing whether the story survives detail, or whether it was a composite.' },
+      Structure: { question: 'Let me make sure I have the arc. What did things look like at the start, and what was different at the end?', testing: 'Checking whether you can restate the story cleanly under pressure.' },
+      Ownership: { question: 'You used "we" a fair amount. What was your personal contribution, as distinct from the rest of the team?', testing: 'Separating your work from the team\'s.' },
+      Impact: { question: 'What was the measurable result? If you had to put a number on it, what would it be, and how do you know?', testing: 'Testing whether the outcome is real and whether you tracked it.' },
+      Relevance: { question: 'How does that map to this role specifically? Where would that experience not transfer?', testing: 'Checking self-awareness about fit and gaps.' },
+    };
+    const generic = [
+      { question: 'What would you do differently if you had to do it again?', testing: 'Reflection and learning.' },
+      { question: 'What pushback did you get, and from whom?', testing: 'Whether the story was as smooth as it sounds.' },
+      { question: 'What was the hardest tradeoff in that, and how did you make the call?', testing: 'Judgment under constraints.' },
+    ];
+    for (const c of lowest) {
+      const p = probes[c.name];
+      if (!asked.includes(p.question)) return p;
+    }
+    for (const g of generic) if (!asked.includes(g.question)) return g;
+    return generic[0];
+  }
+
+  // ======================= Session state =======================
+  const session = {
+    mode: 'sample', apiKey: '', jd: '', resume: '',
+    questions: [], index: 0, phase: 'idle',
+    thread: [], followupsUsed: 0, current: null, results: [],
+  };
+
+  function currentBase() { return session.questions[session.index]; }
+
+  function setSessionBusy(busy, label) {
+    els.score.disabled = busy; els.skip.disabled = busy;
+    els.followup.disabled = busy; els.next.disabled = busy;
+    els.sessionStatus.textContent = label || '';
+    els.afterStatus.textContent = label || '';
+  }
+
+  function showSessionError(msg) { els.sessionError.textContent = msg; els.sessionError.classList.remove('hidden'); }
+  function clearSessionError() { els.sessionError.classList.add('hidden'); }
+
+  function friendlyError(err) {
+    const m = (err && err.message) || String(err);
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Could not reach api.anthropic.com. Check your connection, and note that some browser extensions or corporate networks block direct API calls.';
+    if (/authentication|invalid x-api-key|api key/i.test(m)) return 'The API key was rejected. Double-check that you pasted the full key.';
+    if (/JSON|Unexpected token/i.test(m)) return 'The model returned something that could not be parsed. Try again.';
+    return 'Request failed: ' + m;
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+  // ---- transcript rendering ----
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function addCoachQuestion(item, isFollowup) {
+    const m = el('div', 'msg coach');
+    const who = el('div', 'who');
+    who.appendChild(el('span', null, 'Coach'));
+    who.appendChild(el('span', 'chip' + (isFollowup ? ' followup' : ''), isFollowup ? 'Follow-up' : item.type));
+    m.appendChild(who);
+    m.appendChild(el('div', 'q', item.question));
+    if (item.testing) {
+      const t = el('div', 't');
+      t.appendChild(el('strong', null, 'What they are testing: '));
+      t.appendChild(document.createTextNode(item.testing));
+      m.appendChild(t);
+    }
+    els.transcript.appendChild(m);
+    scrollToBottom();
+  }
+
+  function addYou(text) {
+    const m = el('div', 'msg you');
+    m.appendChild(el('div', 'who', 'You'));
+    m.appendChild(document.createTextNode(text));
+    els.transcript.appendChild(m);
+    scrollToBottom();
+  }
+
+  function addCoachNote(text) {
+    const m = el('div', 'msg coach');
+    m.appendChild(el('div', 'who', 'Coach'));
+    m.appendChild(document.createTextNode(text));
+    els.transcript.appendChild(m);
+    scrollToBottom();
+  }
+
+  function addScoreCard(score, label) {
+    const card = el('div', 'msg score');
+    const who = el('div', 'who');
+    who.appendChild(el('span', null, 'Coach · Score for ' + label));
+    who.appendChild(el('span', 'badge ' + session.mode, session.mode === 'sample' ? 'Sample scoring' : 'Live from Claude'));
+    card.appendChild(who);
+    const total = score.criteria.reduce((a, c) => a + c.score, 0);
+    const v = el('p', 'verdict');
+    v.appendChild(el('span', 'total', `${total} / ${score.criteria.length * 5}`));
+    v.appendChild(document.createTextNode(score.overall || ''));
+    card.appendChild(v);
+
+    for (const c of score.criteria) {
+      const row = el('div', 'crit ' + (c.score >= 4 ? 'good' : c.score === 3 ? 'warn' : 'bad'));
+      row.appendChild(el('div', 'name', c.name));
+      const dots = el('div', 'dots');
+      for (let i = 1; i <= 5; i++) dots.appendChild(el('i', i <= c.score ? 'on' : ''));
+      dots.appendChild(el('span', null, ' ' + c.score + '/5'));
+      row.appendChild(dots);
+      row.appendChild(el('div', 'comment', c.comment));
+      card.appendChild(row);
+    }
+
+    const cols = el('div', 'cols');
+    const w = el('div', 'worked'); w.appendChild(el('h4', null, 'What worked'));
+    const wl = el('ul'); score.worked.forEach((s) => wl.appendChild(el('li', null, s))); w.appendChild(wl);
+    const mi = el('div', 'missing'); mi.appendChild(el('h4', null, 'What was missing'));
+    const ml = el('ul'); score.missing.forEach((s) => ml.appendChild(el('li', null, s))); mi.appendChild(ml);
+    cols.appendChild(w); cols.appendChild(mi);
+    card.appendChild(cols);
+
+    if (score.rewrite && score.rewrite.improved) {
+      const rw = el('div', 'rewrite');
+      rw.appendChild(el('h4', null, 'Stronger rewrite of one weak sentence'));
+      if (score.rewrite.original) rw.appendChild(el('div', 'orig', score.rewrite.original));
+      rw.appendChild(el('div', 'imp', score.rewrite.improved));
+      if (score.rewrite.why) rw.appendChild(el('div', 'why', score.rewrite.why));
+      card.appendChild(rw);
+    }
+    els.transcript.appendChild(card);
+    scrollToBottom();
+  }
+
+  function addSummary() {
+    const card = el('div', 'msg score summary');
+    card.appendChild(el('div', 'who', 'Coach · Session summary'));
+    if (!session.results.length) {
+      card.appendChild(el('p', 'verdict', 'You skipped every question, so there is nothing to summarize. Start again and answer at least one.'));
+      els.transcript.appendChild(card); scrollToBottom(); return;
+    }
+    const avg = RUBRIC.map((name) => {
+      const vals = session.results.map((r) => r.criteria.find((c) => c.name === name)?.score || 0);
+      return { name, avg: vals.reduce((a, b) => a + b, 0) / vals.length };
+    });
+    const best = [...avg].sort((a, b) => b.avg - a.avg)[0];
+    const worst = [...avg].sort((a, b) => a.avg - b.avg)[0];
+    card.appendChild(el('p', 'verdict', `${session.results.length} answer${session.results.length === 1 ? '' : 's'} scored. Strongest area: ${best.name} (${best.avg.toFixed(1)}). Biggest opportunity: ${worst.name} (${worst.avg.toFixed(1)}).`));
+    const table = el('table');
+    const thead = el('thead'); const hr = el('tr');
+    ['Answer', ...RUBRIC, 'Total'].forEach((h) => hr.appendChild(el('th', null, h)));
+    thead.appendChild(hr); table.appendChild(thead);
+    const tbody = el('tbody');
+    for (const r of session.results) {
+      const tr = el('tr');
+      tr.appendChild(el('td', null, r.label));
+      let tot = 0;
+      RUBRIC.forEach((name) => { const s = r.criteria.find((c) => c.name === name)?.score || 0; tot += s; tr.appendChild(el('td', null, String(s))); });
+      tr.appendChild(el('td', null, `${tot}/25`));
+      tbody.appendChild(tr);
+    }
+    const ar = el('tr');
+    ar.appendChild(el('td', null, 'Average'));
+    let atot = 0;
+    avg.forEach((a) => { atot += a.avg; ar.appendChild(el('td', null, a.avg.toFixed(1))); });
+    ar.appendChild(el('td', null, atot.toFixed(1) + '/25'));
+    tbody.appendChild(ar);
+    table.appendChild(tbody);
+    card.appendChild(table);
+    els.transcript.appendChild(card);
+    scrollToBottom();
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(() => { els.composer.scrollIntoView({ behavior: 'smooth', block: 'end' }); });
+  }
+
+  // ---- phases ----
+  function updateHeader() {
+    const n = session.questions.length;
+    const i = Math.min(session.index, n);
+    els.sessionTitle.textContent = session.phase === 'done' ? `Session complete: ${n} questions` : `Question ${i + 1} of ${n}${session.current && session.current.isFollowup ? ' · follow-up' : ''}`;
+    els.progressBar.style.width = `${(i / n) * 100}%`;
+  }
+
+  function askBaseQuestion() {
+    const base = currentBase();
+    session.current = { ...base, isFollowup: false };
+    session.thread = [];
+    session.followupsUsed = 0;
+    addCoachQuestion(base, false);
+    if (base.sampleAnswer) {
+      els.sampleAnswer.textContent = base.sampleAnswer;
+      els.sampleBox.classList.remove('hidden');
+      els.sampleBox.open = false;
+    } else {
+      els.sampleBox.classList.add('hidden');
+    }
+    enterAnswerPhase();
+  }
+
+  function enterAnswerPhase() {
+    session.phase = 'answer';
+    els.answer.value = '';
+    els.answerArea.classList.remove('hidden');
+    els.afterScore.classList.add('hidden');
+    els.skip.textContent = session.current.isFollowup ? 'Skip this follow-up' : 'Skip this question';
+    clearSessionError();
+    updateHeader();
+    els.answer.focus();
+  }
+
+  function enterScoredPhase() {
+    session.phase = 'scored';
+    els.answerArea.classList.add('hidden');
+    els.sampleBox.classList.add('hidden');
+    els.afterScore.classList.remove('hidden');
+    const left = MAX_FOLLOWUPS - session.followupsUsed;
+    els.followup.classList.toggle('hidden', left <= 0);
+    els.followup.textContent = session.followupsUsed ? `Ask another follow-up (${left} left)` : 'Ask me a follow-up';
+    els.next.textContent = session.index + 1 >= session.questions.length ? 'Finish session' : 'Next question';
+    updateHeader();
+  }
+
+  function advance() {
+    session.index += 1;
+    if (session.index >= session.questions.length) {
+      session.phase = 'done';
+      session.current = null;
+      els.answerArea.classList.add('hidden');
+      els.afterScore.classList.add('hidden');
+      els.sampleBox.classList.add('hidden');
+      updateHeader();
+      addSummary();
+      return;
+    }
+    askBaseQuestion();
+  }
+
+  function startSession(questions, mode) {
+    session.questions = questions;
+    session.index = 0;
+    session.results = [];
+    session.mode = mode;
+    els.transcript.innerHTML = '';
+    els.badge.textContent = mode === 'sample' ? 'Sample mode' : 'Live from Claude';
+    els.badge.className = 'badge ' + mode;
+    els.session.classList.remove('hidden');
+    els.setup.open = false;
+    els.sumHint.textContent = mode === 'sample' ? 'Sample mode (no API key)' : 'Live mode';
+    addCoachNote(mode === 'sample'
+      ? 'Sample mode: these questions and sample answers are pre-written, and scoring is rule-based rather than from Claude. Paste an API key in Setup and start again for real coaching. Answer each question in your own words, then I will score it and may probe with a follow-up.'
+      : 'I have read the job description and your résumé. I will ask ten questions, one at a time. Read the sample answer if you want a model, then type your own. I will score it and may probe with a follow-up, as a real interviewer would.');
+    askBaseQuestion();
+    els.session.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ======================= Handlers: setup =======================
+  els.generate.addEventListener('click', async () => {
+    const apiKey = els.key.value.trim();
+    const jd = els.jd.value;
+    const resume = els.resume.value;
+    els.setupError.classList.add('hidden');
+
+    if (!jd.trim() || !resume.trim()) {
+      els.setupError.textContent = 'Paste both a job description and a résumé first. Use "Load sample inputs" if you want something to try.';
+      els.setupError.classList.remove('hidden');
+      return;
+    }
+    session.apiKey = apiKey; session.jd = jd; session.resume = resume;
+
+    if (!apiKey) {
+      els.generate.disabled = true; els.status.textContent = 'Preparing sample session…';
+      await sleep(600);
+      const matched = jd.trim() === SAMPLE.jd.trim() && resume.trim() === SAMPLE.resume.trim();
+      const src = matched ? SAMPLE : GENERIC_SAMPLE;
+      const qs = normalizeQuestions({ behavioral: src.behavioral, programManagement: src.programManagement });
+      els.generate.disabled = false; els.status.textContent = '';
+      startSession(qs, 'sample');
+      if (!matched) addCoachNote('Note: because no API key was entered, these are generic sample questions and do not reflect your job description or résumé.');
+      return;
+    }
+
+    els.generate.disabled = true; els.loadSample.disabled = true; els.status.textContent = 'Asking Claude for questions…';
+    try {
+      const text = await callClaude(apiKey, GEN_SYSTEM, ctxBlock(jd, resume) + '\n\nWrite the ten tailored interview questions with sample answers as JSON.');
+      const qs = normalizeQuestions(extractJson(text));
+      startSession(qs, 'live');
+    } catch (err) {
+      els.setupError.textContent = friendlyError(err);
+      els.setupError.classList.remove('hidden');
+    } finally {
+      els.generate.disabled = false; els.loadSample.disabled = false; els.status.textContent = '';
+    }
+  });
+
+  els.loadSample.addEventListener('click', () => {
+    els.jd.value = SAMPLE.jd;
+    els.resume.value = SAMPLE.resume;
+    els.status.textContent = 'Loaded sample job description and résumé.';
+  });
+
+  els.clear.addEventListener('click', () => {
+    els.jd.value = ''; els.resume.value = '';
+    els.status.textContent = ''; els.setupError.classList.add('hidden');
+  });
+
+  els.toggleKey.addEventListener('click', () => {
+    const hidden = els.key.type === 'password';
+    els.key.type = hidden ? 'text' : 'password';
+    els.toggleKey.textContent = hidden ? 'Hide' : 'Show';
+  });
+
+  // ======================= Handlers: session =======================
+  els.score.addEventListener('click', async () => {
+    const answer = els.answer.value.trim();
+    clearSessionError();
+    if (!answer) { showSessionError('Type an answer first, or skip.'); return; }
+
+    const cur = session.current;
+    session.thread.push({ question: cur.question, testing: cur.testing, answer });
+    addYou(answer);
+    const label = `Q${session.index + 1}${cur.isFollowup ? ` follow-up ${session.followupsUsed}` : ''}`;
+
+    setSessionBusy(true, 'Scoring…');
+    try {
+      let score;
+      if (session.mode === 'sample') {
+        await sleep(600 + Math.random() * 400);
+        score = heuristicScore(answer, cur, session.jd);
+      } else {
+        const user = ctxBlock(session.jd, session.resume) + '\n\n' + threadBlock(session.thread) +
+          '\n\nScore the LAST candidate answer above' + (cur.isFollowup ? ' (the answer to the follow-up question, using the earlier exchange as context)' : '') + ' as JSON.';
+        score = normalizeScore(extractJson(await callClaude(session.apiKey, SCORE_SYSTEM, user)));
+      }
+      session.thread[session.thread.length - 1].score = score;
+      session.results.push({ label, criteria: score.criteria });
+      addScoreCard(score, label);
+      enterScoredPhase();
+    } catch (err) {
+      session.thread.pop();
+      showSessionError(friendlyError(err));
+    } finally {
+      setSessionBusy(false, '');
+    }
+  });
+
+  els.skip.addEventListener('click', () => {
+    clearSessionError();
+    if (session.current.isFollowup) {
+      addCoachNote('Skipped the follow-up.');
+      enterScoredPhase();
+    } else {
+      addCoachNote('Skipped.');
+      advance();
+    }
+  });
+
+  els.followup.addEventListener('click', async () => {
+    clearSessionError();
+    if (session.followupsUsed >= MAX_FOLLOWUPS) return;
+    setSessionBusy(true, 'Thinking of a follow-up…');
+    try {
+      let fu;
+      const last = session.thread[session.thread.length - 1];
+      if (session.mode === 'sample') {
+        await sleep(500 + Math.random() * 400);
+        fu = heuristicFollowup(session.thread, last.score);
+      } else {
+        const user = ctxBlock(session.jd, session.resume) + '\n\n' + threadBlock(session.thread) + '\n\nAsk one probing follow-up question as JSON.';
+        const obj = extractJson(await callClaude(session.apiKey, FOLLOWUP_SYSTEM, user));
+        fu = { question: String(obj.question || '').trim(), testing: String(obj.testing || '').trim() };
+        if (!fu.question) throw new Error('No follow-up question returned.');
+      }
+      session.followupsUsed += 1;
+      session.current = { type: currentBase().type, question: fu.question, testing: fu.testing, isFollowup: true };
+      addCoachQuestion(session.current, true);
+      els.sampleBox.classList.add('hidden');
+      enterAnswerPhase();
+    } catch (err) {
+      showSessionError(friendlyError(err));
+    } finally {
+      setSessionBusy(false, '');
+    }
+  });
+
+  els.next.addEventListener('click', () => { clearSessionError(); advance(); });
+
+  els.restart.addEventListener('click', () => {
+    session.phase = 'idle';
+    session.questions = []; session.results = []; session.thread = []; session.current = null;
+    els.session.classList.add('hidden');
+    els.transcript.innerHTML = '';
+    els.setup.open = true;
+    els.sumHint.textContent = '';
+    els.setup.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // Ctrl/Cmd+Enter submits the answer.
+  els.answer.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !els.score.disabled) els.score.click();
+  });
+})();
+</script>
+</body>
+</html>

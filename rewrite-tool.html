@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draft Rewriter</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --border: #d9d6cd;
+    --text: #1f1e1a;
+    --muted: #6b675d;
+    --accent: #b5482b;
+    --accent-text: #ffffff;
+    --sample: #8a6d1f;
+    --sample-bg: #fbf3d9;
+    --error: #a12b2b;
+    --error-bg: #fbe4e4;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a;
+      --surface: #212126;
+      --border: #3a3a42;
+      --text: #ececea;
+      --muted: #a2a09a;
+      --accent: #e0694a;
+      --accent-text: #17171a;
+      --sample: #e2c46a;
+      --sample-bg: #3a3320;
+      --error: #f28b8b;
+      --error-bg: #3e2323;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17171a; --surface: #212126; --border: #3a3a42; --text: #ececea;
+    --muted: #a2a09a; --accent: #e0694a; --accent-text: #17171a;
+    --sample: #e2c46a; --sample-bg: #3a3320; --error: #f28b8b; --error-bg: #3e2323;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 24px; margin-bottom: 24px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+
+  .key-row {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 20px;
+  }
+  .key-row label { font-weight: 600; white-space: nowrap; }
+  .key-row input {
+    flex: 1 1 260px; min-width: 0;
+    font: 14px var(--mono); padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--text);
+  }
+  .key-row .hint { flex-basis: 100%; font-size: 13px; color: var(--muted); margin: 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-weight: 600; }
+  .field small { color: var(--muted); font-size: 13px; }
+  textarea {
+    width: 100%; min-height: 220px; resize: vertical;
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text);
+  }
+  textarea:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0; }
+  button {
+    font: inherit; font-weight: 600; cursor: pointer;
+    padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+  }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: 0.55; cursor: wait; }
+  .status { color: var(--muted); font-size: 14px; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+  }
+  .badge.sample { background: var(--sample-bg); color: var(--sample); }
+  .badge.live { background: var(--accent); color: var(--accent-text); }
+
+  .output {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; min-height: 120px;
+  }
+  .output-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .output-head h2 { font-size: 17px; margin: 0; }
+  .output pre {
+    margin: 0; white-space: pre-wrap; word-wrap: break-word;
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .output .empty { color: var(--muted); }
+  .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .error { background: var(--error-bg); color: var(--error); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 14px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Draft Rewriter</h1>
+    <p>Rewrite a draft to match your guidelines and reference examples.</p>
+  </header>
+
+  <div class="key-row">
+    <label for="apiKey">Claude API key</label>
+    <input id="apiKey" type="password" placeholder="sk-ant-… (leave empty to try sample mode)" autocomplete="off" spellcheck="false">
+    <button id="toggleKey" type="button">Show</button>
+    <p class="hint">The key stays in this page only. It is sent directly to api.anthropic.com and is never stored. Leave it empty to see a realistic sample rewrite without making a request.</p>
+  </div>
+
+  <div class="grid">
+    <div class="field">
+      <label for="guidelines">Guidelines</label>
+      <small>Tone, structure, length, rules to follow.</small>
+      <textarea id="guidelines" placeholder="e.g. Plain language. Lead with the ask. Under 120 words. No jargon."></textarea>
+    </div>
+    <div class="field">
+      <label for="examples">Reference examples</label>
+      <small>Writing that already sounds right.</small>
+      <textarea id="examples" placeholder="Paste one or more examples of the style you want."></textarea>
+    </div>
+    <div class="field">
+      <label for="draft">Draft</label>
+      <small>The text to rewrite.</small>
+      <textarea id="draft" placeholder="Paste your draft here."></textarea>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="rewrite" class="primary" type="button">Rewrite</button>
+    <button id="loadSample" type="button">Load sample inputs</button>
+    <button id="clear" type="button">Clear</button>
+    <span id="status" class="status"></span>
+  </div>
+
+  <section class="output">
+    <div class="output-head">
+      <h2>Rewritten draft</h2>
+      <div>
+        <span id="modeBadge" class="badge hidden"></span>
+        <button id="copy" type="button" class="hidden">Copy</button>
+      </div>
+    </div>
+    <pre id="result"><span class="empty">Your rewritten draft will appear here.</span></pre>
+    <p id="note" class="note hidden"></p>
+    <div id="error" class="error hidden"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    key: $('apiKey'), toggleKey: $('toggleKey'),
+    guidelines: $('guidelines'), examples: $('examples'), draft: $('draft'),
+    rewrite: $('rewrite'), loadSample: $('loadSample'), clear: $('clear'),
+    status: $('status'), badge: $('modeBadge'), copy: $('copy'),
+    result: $('result'), note: $('note'), error: $('error'),
+  };
+
+  // ---------- Sample data (used when no API key is entered) ----------
+  const SAMPLES = [
+    {
+      guidelines:
+`- Write for a busy executive: lead with the decision or ask in the first sentence.
+- Plain language. No buzzwords ("synergy", "leverage", "circle back").
+- Keep it under 120 words.
+- Use one short list only if there are three or more parallel items.
+- End with a clear next step and a date.`,
+      examples:
+`Example 1
+Hi Dana, we need your sign-off on the Q3 vendor contract by Friday. The terms are the same as last year except the renewal window moves from 90 to 60 days. Legal has reviewed it. If you're fine with the change, reply "approved" and I'll send it out.
+
+Example 2
+Quick update on the onboarding project: we're two days behind because the SSO integration took longer than planned. No impact on the launch date yet. I'll confirm by Thursday whether we need to pull anyone in.`,
+      draft:
+`Hey team, just wanted to reach out and circle back on the marketing dashboard initiative that we have been working on for the past several weeks. As you may or may not be aware, there have been a number of moving pieces and we've been trying to leverage the new data warehouse to get better synergy between the sales numbers and the campaign numbers. Long story short, we're at a point where we need to make a decision about whether we go with the third-party BI tool or build it in-house, and I wanted to get everyone's thoughts. There are a lot of tradeoffs. The third-party tool is faster to set up but costs about $40k a year and we'd be locked in, whereas building it ourselves would probably take two engineers about six weeks but then we'd own it. I'm leaning toward the third-party tool but I'm really open to whatever. Let me know what you think whenever you get a chance, no rush but ideally soon-ish because the vendor quote expires at the end of the month. Thanks so much!`,
+      output:
+`Hi team, we need to decide by June 27 whether to buy the third-party BI tool or build the marketing dashboard in-house. The vendor quote expires then.
+
+The tradeoff:
+- Third-party tool: live in about two weeks, $40k per year, and we're locked into their platform.
+- Build in-house: two engineers for about six weeks, then we own it outright.
+
+I recommend the third-party tool so we get the sales and campaign numbers in one place this quarter. If you disagree, reply with your reasoning by Wednesday, June 25. Otherwise I'll accept the quote on Thursday.`,
+    },
+    {
+      guidelines:
+`- Customer support voice: warm, direct, never defensive.
+- Acknowledge the problem in the first sentence. Do not say "we apologize for any inconvenience."
+- Say exactly what we did and what the customer should do next.
+- No exclamation marks. Under 100 words.`,
+      examples:
+`Example 1
+Thanks for flagging the duplicate charge, Priya. You're right, our system billed you twice on May 3. I've refunded the second charge; it should show on your statement within 5 business days. You don't need to do anything else.
+
+Example 2
+I can see why the export failed. The file you uploaded is 220 MB and our limit is 200 MB. If you split it into two files, the export will go through. Let me know if you'd like me to walk you through it.`,
+      draft:
+`Dear Valued Customer,
+
+We apologize for any inconvenience you may have experienced. We have received your message regarding the issue with your account login. Please be advised that our team has investigated the matter and it appears that your account was temporarily locked due to multiple failed login attempts, which is a security measure we have in place to protect our users. We have gone ahead and unlocked the account on our end. Going forward, please ensure that you are entering the correct password. If you continue to experience difficulties, please do not hesitate to reach out to us again and we will be more than happy to assist you further!
+
+Best regards,
+Support Team`,
+      output:
+`Hi Marcus, your account was locked after several failed login attempts, which is a safeguard against someone guessing your password. I've unlocked it, so you can sign in now.
+
+If you don't remember the password, use the "Forgot password" link on the login page and we'll send a reset email. Reply here if it locks again and I'll look into it with you.
+
+Best,
+Jordan
+Support Team`,
+    },
+  ];
+
+  const GENERIC_SAMPLE_OUTPUT =
+`[Sample mode: no API key was entered, so this is a canned rewrite rather than one generated from your inputs.]
+
+We need a decision on the vendor contract by Friday. The terms match last year's, except the renewal window shortens from 90 to 60 days. Legal has already reviewed and cleared it.
+
+If the shorter window works for you, reply "approved" and I'll send the contract to the vendor the same day. If not, let me know what you'd like changed and I'll go back to them before Thursday.
+
+To see a real rewrite of your own text, paste an API key above and click Rewrite again.`;
+
+  let sampleIndex = 0;
+
+  // ---------- Prompt construction ----------
+  const SYSTEM_PROMPT =
+`You are an editor. Rewrite the user's draft so that it follows the guidelines and matches the tone, structure, and register of the reference examples.
+
+Rules:
+- Preserve the draft's meaning, facts, names, numbers, and commitments. Do not invent new facts.
+- Match the examples' style closely, but do not copy their content.
+- Return only the rewritten draft. No preamble, no explanation, no headings, no markdown fences.`;
+
+  function buildUserMessage(guidelines, examples, draft) {
+    return `<guidelines>
+${guidelines.trim() || '(none provided)'}
+</guidelines>
+
+<reference_examples>
+${examples.trim() || '(none provided)'}
+</reference_examples>
+
+<draft>
+${draft.trim()}
+</draft>
+
+Rewrite the draft.`;
+  }
+
+  // ---------- API call ----------
+  async function callClaude(apiKey, userMessage) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'server-side-fallback-2026-07-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-5-5',
+        max_tokens: 16000,
+        fallbacks: 'default',
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* non-JSON body */ }
+
+    if (!res.ok) {
+      const msg = data && data.error && data.error.message ? data.error.message : `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+
+    if (data.stop_reason === 'refusal') {
+      const why = data.stop_details && data.stop_details.explanation ? ` ${data.stop_details.explanation}` : '';
+      throw new Error(`The model declined this request.${why}`);
+    }
+
+    const text = (data.content || [])
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n')
+      .trim();
+
+    if (!text) throw new Error('The response contained no text.');
+    return { text, truncated: data.stop_reason === 'max_tokens', usage: data.usage };
+  }
+
+  // ---------- UI helpers ----------
+  function setBusy(busy, label) {
+    els.rewrite.disabled = busy;
+    els.loadSample.disabled = busy;
+    els.status.textContent = label || '';
+  }
+
+  function showResult(text, mode, noteText) {
+    els.result.textContent = text;
+    els.badge.textContent = mode === 'sample' ? 'Sample answer' : 'Live from Claude';
+    els.badge.className = 'badge ' + (mode === 'sample' ? 'sample' : 'live');
+    els.copy.classList.remove('hidden');
+    els.error.classList.add('hidden');
+    if (noteText) { els.note.textContent = noteText; els.note.classList.remove('hidden'); }
+    else { els.note.classList.add('hidden'); }
+  }
+
+  function showError(msg) {
+    els.error.textContent = msg;
+    els.error.classList.remove('hidden');
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+  // ---------- Sample mode ----------
+  function pickSampleOutput(guidelines, examples, draft) {
+    // If the inputs are one of the loaded samples, return its matching rewrite.
+    for (const s of SAMPLES) {
+      if (draft.trim() === s.draft.trim()) return { text: s.output, matched: true };
+    }
+    return { text: GENERIC_SAMPLE_OUTPUT, matched: false };
+  }
+
+  // ---------- Handlers ----------
+  els.rewrite.addEventListener('click', async () => {
+    const apiKey = els.key.value.trim();
+    const guidelines = els.guidelines.value;
+    const examples = els.examples.value;
+    const draft = els.draft.value;
+
+    els.error.classList.add('hidden');
+
+    if (!draft.trim()) {
+      showError('Paste a draft first. The guidelines and examples are optional, but there has to be something to rewrite.');
+      return;
+    }
+
+    if (!apiKey) {
+      setBusy(true, 'Generating sample…');
+      await sleep(700 + Math.random() * 500);
+      const { text, matched } = pickSampleOutput(guidelines, examples, draft);
+      showResult(
+        text,
+        'sample',
+        matched
+          ? 'No API key entered, so this is a pre-written sample rewrite for the loaded sample inputs. Paste a key to get a real rewrite.'
+          : 'No API key entered. This is a canned example and does not reflect your draft. Paste a key to get a real rewrite.'
+      );
+      setBusy(false, '');
+      return;
+    }
+
+    setBusy(true, 'Asking Claude…');
+    try {
+      const { text, truncated, usage } = await callClaude(apiKey, buildUserMessage(guidelines, examples, draft));
+      const tokens = usage ? `${usage.input_tokens} in / ${usage.output_tokens} out tokens.` : '';
+      showResult(
+        text,
+        'live',
+        (truncated ? 'The response hit the output limit and may be cut off. ' : '') + tokens
+      );
+    } catch (err) {
+      showError(friendlyError(err));
+    } finally {
+      setBusy(false, '');
+    }
+  });
+
+  function friendlyError(err) {
+    const m = (err && err.message) || String(err);
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) {
+      return 'Could not reach api.anthropic.com. Check your connection, and note that some browser extensions or corporate networks block direct API calls.';
+    }
+    if (/authentication|invalid x-api-key|api key/i.test(m)) {
+      return 'The API key was rejected. Double-check that you pasted the full key.';
+    }
+    return 'Request failed: ' + m;
+  }
+
+  els.loadSample.addEventListener('click', () => {
+    const s = SAMPLES[sampleIndex % SAMPLES.length];
+    sampleIndex += 1;
+    els.guidelines.value = s.guidelines;
+    els.examples.value = s.examples;
+    els.draft.value = s.draft;
+    els.status.textContent = `Loaded sample ${((sampleIndex - 1) % SAMPLES.length) + 1} of ${SAMPLES.length}.`;
+  });
+
+  els.clear.addEventListener('click', () => {
+    els.guidelines.value = '';
+    els.examples.value = '';
+    els.draft.value = '';
+    els.result.innerHTML = '<span class="empty">Your rewritten draft will appear here.</span>';
+    els.badge.classList.add('hidden');
+    els.copy.classList.add('hidden');
+    els.note.classList.add('hidden');
+    els.error.classList.add('hidden');
+    els.status.textContent = '';
+  });
+
+  els.toggleKey.addEventListener('click', () => {
+    const hidden = els.key.type === 'password';
+    els.key.type = hidden ? 'text' : 'password';
+    els.toggleKey.textContent = hidden ? 'Hide' : 'Show';
+  });
+
+  els.copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(els.result.textContent);
+      els.copy.textContent = 'Copied';
+      setTimeout(() => { els.copy.textContent = 'Copy'; }, 1500);
+    } catch (_) {
+      els.copy.textContent = 'Select & copy manually';
+    }
+  });
+})();
+</script>
+</body>
+</html>
