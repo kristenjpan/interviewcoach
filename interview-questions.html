@@ -80,6 +80,15 @@
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field label { font-weight: 600; }
   .field small { color: var(--muted); font-size: 13px; }
+  .inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .inline input[type="url"] {
+    flex: 1 1 200px; min-width: 0; font: 14px var(--mono); padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text);
+  }
+  .inline .meta { font-size: 13px; color: var(--muted); flex-basis: 100%; }
+  .inline .meta.ok { color: var(--good); }
+  .inline .meta.err { color: var(--error); }
+  textarea.dropping { outline: 2px dashed var(--accent); outline-offset: 1px; }
   textarea {
     width: 100%; min-height: 220px; resize: vertical;
     font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -187,13 +196,23 @@
       <div class="grid">
         <div class="field">
           <label for="jd">Job description</label>
-          <small>Paste the full posting: responsibilities, requirements, team context.</small>
-          <textarea id="jd" placeholder="Paste the job description here."></textarea>
+          <small>Paste the full posting, or fetch it from the job posting's URL.</small>
+          <div class="inline">
+            <input id="jdUrl" type="url" placeholder="https://… job posting URL" spellcheck="false">
+            <button id="fetchJd" type="button" class="small">Fetch posting</button>
+            <span id="jdMeta" class="meta hidden"></span>
+          </div>
+          <textarea id="jd" placeholder="Paste the job description here, or fetch it from a URL above."></textarea>
         </div>
         <div class="field">
           <label for="resume">Résumé</label>
-          <small>Plain text is fine. Include roles, results, and dates.</small>
-          <textarea id="resume" placeholder="Paste your résumé here."></textarea>
+          <small>Paste it, upload a file, or drop a file onto the box. Include roles, results, and dates.</small>
+          <div class="inline">
+            <input id="resumeFile" type="file" class="hidden" accept=".pdf,.docx,.txt,.md,.rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain">
+            <button id="uploadResume" type="button" class="small">Upload file (PDF, Word, or text)</button>
+            <span id="resumeMeta" class="meta hidden"></span>
+          </div>
+          <textarea id="resume" placeholder="Paste your résumé here, or upload a file above."></textarea>
         </div>
       </div>
 
@@ -250,6 +269,8 @@
     setup: $('setup'), sumHint: $('sumHint'),
     key: $('apiKey'), toggleKey: $('toggleKey'),
     jd: $('jd'), resume: $('resume'),
+    jdUrl: $('jdUrl'), fetchJd: $('fetchJd'), jdMeta: $('jdMeta'),
+    resumeFile: $('resumeFile'), uploadResume: $('uploadResume'), resumeMeta: $('resumeMeta'),
     generate: $('generate'), loadSample: $('loadSample'), clear: $('clear'),
     status: $('status'), setupError: $('setupError'),
     session: $('session'), sessionTitle: $('sessionTitle'), badge: $('modeBadge'), restart: $('restart'),
@@ -942,14 +963,141 @@ Respond with JSON only, no markdown fences and no commentary:
     }
   });
 
+  // ---- Job posting URL and résumé file upload ----
+  function setMeta(node, msg, kind) {
+    node.textContent = msg || '';
+    node.className = 'meta' + (kind ? ' ' + kind : '') + (msg ? '' : ' hidden');
+  }
+
+  const scriptCache = {};
+  function loadScript(src) {
+    if (!scriptCache[src]) {
+      scriptCache[src] = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve;
+        s.onerror = () => { delete scriptCache[src]; reject(new Error('Could not load the file reader library. Check your connection, or paste the text instead.')); };
+        document.head.appendChild(s);
+      });
+    }
+    return scriptCache[src];
+  }
+
+  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const MAMMOTH = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+  const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+  async function extractPdf(file) {
+    await loadScript(PDFJS);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+    const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const pages = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const content = await (await pdf.getPage(p)).getTextContent();
+      let out = ''; let lastY = null;
+      for (const item of content.items) {
+        const y = item.transform ? item.transform[5] : null;
+        if (out && !out.endsWith('\n') && lastY !== null && y !== null && Math.abs(y - lastY) > 2) out += '\n';
+        else if (out && !out.endsWith(' ') && !out.endsWith('\n') && item.str && !item.str.startsWith(' ')) out += ' ';
+        out += item.str;
+        if (item.hasEOL && !out.endsWith('\n')) out += '\n';
+        if (y !== null) lastY = y;
+      }
+      pages.push(out);
+    }
+    return pages.join('\n\n');
+  }
+
+  async function extractDocx(file) {
+    await loadScript(MAMMOTH);
+    const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return result.value;
+  }
+
+  async function extractText(file) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.pdf') || file.type === 'application/pdf') return extractPdf(file);
+    if (name.endsWith('.docx')) return extractDocx(file);
+    if (name.endsWith('.doc')) throw new Error('Old .doc files are not supported. Save it as .docx or PDF and upload again.');
+    let text = await file.text();
+    if (name.endsWith('.rtf') || /^\{\\rtf/.test(text)) {
+      text = text.replace(/\\par[d]?/g, '\n').replace(/\\'[0-9a-f]{2}/gi, '').replace(/\\[a-z]+-?\d* ?/gi, '').replace(/[{}]/g, '');
+    }
+    return text;
+  }
+
+  function cleanText(t) {
+    return t.replace(/\r\n?/g, '\n').replace(/[ \t ]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  async function handleResumeFile(file) {
+    if (!file) return;
+    if (file.size > MAX_FILE_BYTES) { setMeta(els.resumeMeta, 'That file is over 10 MB. Try a smaller one or paste the text.', 'err'); return; }
+    els.uploadResume.disabled = true;
+    setMeta(els.resumeMeta, `Reading ${file.name}…`);
+    try {
+      const text = cleanText(await extractText(file));
+      if (text.length < 50) throw new Error('No readable text found. If this is a scanned PDF, paste the text instead.');
+      els.resume.value = text;
+      setMeta(els.resumeMeta, `Loaded ${file.name} (${text.split(/\s+/).length.toLocaleString()} words). Review the text below and fix anything that read oddly.`, 'ok');
+    } catch (err) {
+      setMeta(els.resumeMeta, (err && err.message) || 'Could not read that file.', 'err');
+    } finally {
+      els.uploadResume.disabled = false;
+      els.resumeFile.value = '';
+    }
+  }
+
+  els.uploadResume.addEventListener('click', () => els.resumeFile.click());
+  els.resumeFile.addEventListener('change', () => handleResumeFile(els.resumeFile.files[0]));
+  ['dragenter', 'dragover'].forEach((ev) => els.resume.addEventListener(ev, (e) => {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) { e.preventDefault(); els.resume.classList.add('dropping'); }
+  }));
+  ['dragleave', 'drop'].forEach((ev) => els.resume.addEventListener(ev, () => els.resume.classList.remove('dropping')));
+  els.resume.addEventListener('drop', (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) { e.preventDefault(); handleResumeFile(f); }
+  });
+
+  async function fetchPosting() {
+    const raw = els.jdUrl.value.trim();
+    if (!raw) { setMeta(els.jdMeta, 'Paste a job posting URL first.', 'err'); return; }
+    const url = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
+    if (!/^https?:$/.test(location.protocol)) {
+      setMeta(els.jdMeta, 'Fetching a URL only works on the deployed site, not when the page is opened as a local file. Paste the text here instead.', 'err');
+      return;
+    }
+    els.fetchJd.disabled = true;
+    setMeta(els.jdMeta, 'Fetching posting…');
+    try {
+      const res = await fetch('/api/fetch-jd?url=' + encodeURIComponent(url));
+      let data = null;
+      try { data = await res.json(); } catch (_) { /* non-JSON body */ }
+      if (!res.ok || !data || !data.text) throw new Error((data && data.error) || `Could not fetch that page (HTTP ${res.status}).`);
+      els.jd.value = data.text;
+      const words = data.text.split(/\s+/).length.toLocaleString();
+      setMeta(els.jdMeta, `Fetched ${words} words${data.truncated ? ' (truncated to the first 30,000 characters)' : ''}. Review the text below and trim any page chrome.`, 'ok');
+    } catch (err) {
+      setMeta(els.jdMeta, (err && err.message) || 'Could not fetch that page.', 'err');
+    } finally {
+      els.fetchJd.disabled = false;
+    }
+  }
+
+  els.fetchJd.addEventListener('click', fetchPosting);
+  els.jdUrl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); fetchPosting(); } });
+
   els.loadSample.addEventListener('click', () => {
     els.jd.value = SAMPLE.jd;
     els.resume.value = SAMPLE.resume;
+    els.jdUrl.value = '';
+    setMeta(els.jdMeta, ''); setMeta(els.resumeMeta, '');
     els.status.textContent = 'Loaded sample job description and résumé.';
   });
 
   els.clear.addEventListener('click', () => {
-    els.jd.value = ''; els.resume.value = '';
+    els.jd.value = ''; els.resume.value = ''; els.jdUrl.value = '';
+    setMeta(els.jdMeta, ''); setMeta(els.resumeMeta, '');
     els.status.textContent = ''; els.setupError.classList.add('hidden');
   });
 
